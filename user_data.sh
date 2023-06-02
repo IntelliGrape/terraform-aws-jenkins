@@ -1,14 +1,13 @@
 #!/bin/bash
-sudo yum install java-11-amazon-corretto -y
-sudo yum install unzip -y
-sudo yum install zip -y
-
+sudo yum update -y
 sudo wget -O /etc/yum.repos.d/jenkins.repo \
     https://pkg.jenkins.io/redhat-stable/jenkins.repo
-sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+sudo yum upgrade
+sudo amazon-linux-extras install java-openjdk11 -y
 sudo yum install jenkins -y
-sudo systemctl start jenkins
 sudo systemctl enable jenkins
+sudo systemctl start jenkins
 sudo systemctl status jenkins
 jenkins --version
 
@@ -31,9 +30,43 @@ sudo yum install -y kubectl
 kubectl version --client --output=yaml
 
 sudo amazon-linux-extras install nginx1 -y
-sudo systemctl start nginx
-sudo systemctl enable nginx
-sudo systemctl status nginx
+cat > /etc/nginx/nginx.conf << EOF
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log;
+pid /run/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    log_format  main  '\$remote_addr - \$remote_user [\$time_local] "\$request" '
+                     '\$status \$body_bytes_sent "\$http_referer" '
+                      '"\$http_user_agent" "\$http_x_forwarded_for"';
+
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile        on;
+    keepalive_timeout  65;
+
+    server {
+        listen 80;
+        server_name _;
+
+        location / {
+            proxy_pass http://127.0.0.1:8080;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+        }
+    }
+}
+EOF
+systemctl restart nginx
+systemctl enable nginx
 nginx -t
 nginx -version
 
