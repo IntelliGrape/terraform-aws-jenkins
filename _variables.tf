@@ -9,7 +9,7 @@ variable "assign_public_ip" {
 }
 
 variable "subnet_ids" {
-  type        = any
+  type        = list(string)
   description = "Subnet Ids where server will be launched"
 }
 
